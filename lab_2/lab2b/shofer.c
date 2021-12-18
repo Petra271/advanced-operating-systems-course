@@ -251,7 +251,13 @@ static int shofer_open_read(struct inode *inode, struct file *filp)
 /* open for input_dev */
 static int shofer_open_write(struct inode *inode, struct file *filp)
 {
-	/* todo (similar to shofer_open_read) */
+	struct shofer_dev *shofer;
+
+	shofer = container_of(inode->i_cdev, struct shofer_dev, cdev);
+	filp->private_data = shofer;
+
+	if ( (filp->f_flags & O_ACCMODE) != O_WRONLY)
+		return -EPERM;
 
 	return 0;
 }
@@ -287,12 +293,30 @@ static ssize_t shofer_read(struct file *filp, char __user *ubuf, size_t count,
 static ssize_t shofer_write(struct file *filp, const char __user *ubuf,
 	size_t count, loff_t *f_pos)
 {
-	/* todo (similar to read) */
+	ssize_t retval = 0;
+	struct shofer_dev *shofer = filp->private_data;
+	struct buffer *in_buff = shofer->in_buff;
+	struct kfifo *fifo = &in_buff->fifo;
+	unsigned int copied;
+
+	spin_lock(&in_buff->key);
+
+	dump_buffer("in_dev-end:in_buff:", in_buff);
+
+	retval = kfifo_from_user(fifo, (char __user *) ubuf, count, &copied);
+	if (retval)
+		klog(KERN_WARNING, "kfifo_from_user failed\n");
+	else
+		retval = copied;
+
+	dump_buffer("in_dev-end:in_buff:", in_buff);
+
+	spin_unlock(&in_buff->key);
 
 	return count;
 }
 
-static long control_ioctl (struct file *filp, unsigned int cmd, unsigned long arg)
+static long control_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	ssize_t retval = 0;
 	struct shofer_dev *shofer = filp->private_data;
@@ -300,14 +324,41 @@ static long control_ioctl (struct file *filp, unsigned int cmd, unsigned long ar
 	struct buffer *out_buff = shofer->out_buff;
 	struct kfifo *fifo_in = &in_buff->fifo;
 	struct kfifo *fifo_out = &out_buff->fifo;
-	char c;
+	char *c;
 	int got;
 
 	if (!cmd)
 		return -EINVAL;
 
-	/* copy cmd bytes from in_buff to out_buff */
-	/* todo (similar to timer) */
+	spin_lock(&out_buff->key);
+	spin_lock(&in_buff->key);
+
+	dump_buffer("in-end-start:in_buff", in_buff);
+	dump_buffer("in-end-start:out_buff", out_buff);
+
+	if (kfifo_len(fifo_in) > 0 && kfifo_avail(fifo_out) > 0) {
+		got = kfifo_out(fifo_in, c, cmd);
+		if (got > 0) {
+			got = kfifo_in(fifo_out, c, cmd);
+			if (got)
+				LOG("moved '%s' from in to out", c);
+			else /* should't happen! */
+				klog(KERN_WARNING, "kfifo_put failed\n");
+		}
+		else { /* should't happen! */
+			klog(KERN_WARNING, "kfifo_get failed\n");
+		}
+	}
+	else {
+		LOG("nothing in input buffer");
+		got = kfifo_put(fifo_out, '#');
+	}
+
+	dump_buffer("in-dev-end:in_buff", in_buff);
+	dump_buffer("out-dev-end:out_buff", out_buff);
+
+	spin_unlock(&in_buff->key);
+	spin_unlock(&out_buff->key);
 
 	return retval;
 }
