@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <string.h>
 
 #define errExit(msg)    do { perror(msg); exit(EXIT_FAILURE); \
                         } while (0)
@@ -15,22 +14,24 @@ main(int argc, char *argv[])
     int nfds, num_open_fds;
     struct pollfd *pfds;
 
-    num_open_fds = nfds = 6;
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s file...\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
+    num_open_fds = nfds = argc - 1;
     pfds = calloc(nfds, sizeof(struct pollfd));
     if (pfds == NULL)
         errExit("malloc");
 
     /* Open each file on command line, and add it 'pfds' array. */
 
-    char buff[15];
-    char *dev="/dev/shofer";
-    for (int j = 0; j < nfds; j++) {        
-        snprintf(buff, 15, "%s%d", dev, j);
-        pfds[j].fd = open(buff, O_RDONLY);
+    for (int j = 0; j < nfds; j++) {
+        pfds[j].fd = open(argv[j + 1], O_RDONLY);
         if (pfds[j].fd == -1)
             errExit("open");
 
-        printf("Opened \"%s\" on fd %d\n", buff, pfds[j].fd);
+        printf("Opened \"%s\" on fd %d\n", argv[j + 1], pfds[j].fd);
 
         pfds[j].events = POLLIN;
     }
