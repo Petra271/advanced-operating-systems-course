@@ -324,7 +324,7 @@ static long control_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 	struct buffer *out_buff = shofer->out_buff;
 	struct kfifo *fifo_in = &in_buff->fifo;
 	struct kfifo *fifo_out = &out_buff->fifo;
-	char c[100];
+	char c[cmd];
 	int got;
 
 	if (!cmd)
