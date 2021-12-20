@@ -53,9 +53,10 @@ main(int argc, char *argv[])
         int ready_devs[ready];
         int ct = 0;
         for (int i=0; i < nfds; i++){
-            if (pfds[i].revents != 0)
+            if (pfds[i].revents != 0){
                 ready_devs[ct] = i;
                 ct+=1;
+            }
         }
 
         int index = 0;
