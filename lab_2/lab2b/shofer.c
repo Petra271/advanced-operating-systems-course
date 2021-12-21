@@ -344,15 +344,14 @@ static long control_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 			if (got)
 				LOG("moved '%s' from in to out", c);
 			else /* should't happen! */
-				klog(KERN_WARNING, "kfifo_put failed\n");
+				klog(KERN_WARNING, "kfifo_out failed\n");
 		}
 		else { /* should't happen! */
-			klog(KERN_WARNING, "kfifo_get failed\n");
+			klog(KERN_WARNING, "kfifo_in failed\n");
 		}
 	}
 	else {
 		LOG("nothing in input buffer");
-		got = kfifo_put(fifo_out, '#');
 	}
 
 	dump_buffer("in-dev-end:in_buff", in_buff);
