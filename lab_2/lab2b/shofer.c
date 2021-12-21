@@ -324,7 +324,7 @@ static long control_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 	struct buffer *out_buff = shofer->out_buff;
 	struct kfifo *fifo_in = &in_buff->fifo;
 	struct kfifo *fifo_out = &out_buff->fifo;
-	char c[cmd];
+	char c[cmd+1];
 	int got;
 
 	if (!cmd)
@@ -339,8 +339,8 @@ static long control_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 	if (kfifo_len(fifo_in) > 0 && kfifo_avail(fifo_out) > 0) {
 		got = kfifo_out(fifo_in, c, cmd);
 		if (got > 0) {
-			got = kfifo_in(fifo_out, c, cmd);
 			c[cmd] = '\0';
+			got = kfifo_in(fifo_out, c, cmd);
 			if (got)
 				LOG("moved '%s' from in to out", c);
 			else /* should't happen! */
