@@ -42,7 +42,7 @@ main(int argc, char *argv[])
  
         while (1) {
             printf("About to poll()\n");
-            ready = poll(pfds, nfds, -1);
+            ready = poll(pfds, nfds, 0);
             if (ready > 0)
                 break;
             sleep(5);
